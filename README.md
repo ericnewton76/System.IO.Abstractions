@@ -11,7 +11,10 @@ Just like System.Web.Abstractions, but for System.IO. Yay for testable IO access
 NuGet only:
 
     Install-Package System.IO.Abstractions
-    Install-Package System.IO.Abstractions.TestingHelpers #for prebuilt Mocks.  See the TestingHelpers repo: https://github.com/System-IO-Abstractions/System.IO.Abstractions.TestingHelpers
+
+Also there's the Testinghelpers assembly, which are simple pre-built Mocks for testing.  See the TestingHelpers repo: https://github.com/System-IO-Abstractions/System.IO.Abstractions.TestingHelpers
+
+    Install-Package System.IO.Abstractions.TestingHelpers 
 
 At the core of the library is IFileSystem and FileSystem. Instead of calling methods like `File.ReadAllText` directly, use `IFileSystem.File.ReadAllText`. We have exactly the same API, except that ours is injectable and testable.
 
