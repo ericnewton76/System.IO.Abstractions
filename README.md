@@ -11,10 +11,7 @@ Just like System.Web.Abstractions, but for System.IO. Yay for testable IO access
 NuGet only:
 
     Install-Package System.IO.Abstractions
-
-and/or:
-
-    Install-Package System.IO.Abstractions.TestingHelpers
+    Install-Package System.IO.Abstractions.TestingHelpers #for prebuilt Mocks.  See the TestingHelpers repo: https://github.com/System-IO-Abstractions/System.IO.Abstractions.TestingHelpers
 
 At the core of the library is IFileSystem and FileSystem. Instead of calling methods like `File.ReadAllText` directly, use `IFileSystem.File.ReadAllText`. We have exactly the same API, except that ours is injectable and testable.
 
@@ -47,8 +44,9 @@ public class MyComponent
 }
 ```
 
-The library also ships with a series of test helpers to save you from having to mock out every call, for basic scenarios. They are not a complete copy of a real-life file system, but they'll get you most of the way there.
+The library has a companion library that has test helpers to save you from having to mock out every call, for basic scenarios. They are not a complete copy of a real-life file system, but they'll get you most of the way there.  See the TestingHelpers repo at https://github.com/System-IO-Abstractions/System.IO.Abstractions.TestingHelpers
 
+Sample of using TestingHelpers:
 ```csharp
 [Test]
 public void MyComponent_Validate_ShouldThrowNotSupportedExceptionIfTestingIsNotAwesome()
