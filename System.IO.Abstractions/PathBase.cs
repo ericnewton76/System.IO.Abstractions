@@ -4,6 +4,19 @@
     [Serializable]
     public abstract class PathBase
     {
+        protected PathBase(IFileSystem fileSystem)
+        {
+            this.FileSystem = fileSystem;
+        }
+
+        [Obsolete("This constructor only exists to support mocking libraries.", error: true)]
+        internal PathBase() { }
+
+        /// <summary>
+        /// Exposes the underlying filesystem implementation. This is useful for implementing extension methods.
+        /// </summary>
+        public IFileSystem FileSystem { get; }
+
         /// <inheritdoc cref="Path.AltDirectorySeparatorChar"/>
         public abstract char AltDirectorySeparatorChar { get; }
 

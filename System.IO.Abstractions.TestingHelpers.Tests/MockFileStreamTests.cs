@@ -28,8 +28,10 @@
         [Test]
         public void MockFileStream_Dispose_ShouldNotResurrectFile()
         {
+            // path in this test case is a subject to Directory.GetParent(path) Linux issue
+            // https://github.com/System-IO-Abstractions/System.IO.Abstractions/issues/395
             var fileSystem = new MockFileSystem();
-            var path = XFS.Path("C:\\test");
+            var path = XFS.Path("C:\\some_folder\\test");
             var directory = fileSystem.Path.GetDirectoryName(path);
             fileSystem.AddFile(path, new MockFileData("Bla"));
             var stream = fileSystem.File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Delete);
@@ -73,6 +75,51 @@
 
             Assert.IsFalse(stream.CanWrite);
             Assert.Throws<NotSupportedException>(() => stream.WriteByte(1));
+        }
+
+        [Test]
+        public void MockFileStream_Close_MultipleCallsDontThrow()
+        {
+            var fileSystem = new MockFileSystem();
+            var path = XFS.Path("C:\\test");
+            fileSystem.AddFile(path, new MockFileData("Bla"));
+            var stream = fileSystem.File.OpenRead(path);
+
+            // Act
+            stream.Close();
+
+            // Assert
+            Assert.DoesNotThrow(() => stream.Close());
+        }
+
+        [Test]
+        public void MockFileStream_Dispose_MultipleCallsDontThrow()
+        {
+            var fileSystem = new MockFileSystem();
+            var path = XFS.Path("C:\\test");
+            fileSystem.AddFile(path, new MockFileData("Bla"));
+            var stream = fileSystem.File.OpenRead(path);
+
+            // Act
+            stream.Dispose();
+
+            // Assert
+            Assert.DoesNotThrow(() => stream.Dispose());
+        }
+
+        [Test]
+        public void MockFileStream_Dispose_OperationsAfterDisposeThrow()
+        {
+            var fileSystem = new MockFileSystem();
+            var path = XFS.Path("C:\\test");
+            fileSystem.AddFile(path, new MockFileData(new byte[0]));
+            var stream = fileSystem.FileInfo.FromFileName(path).OpenWrite();
+
+            // Act
+            stream.Dispose();
+
+            // Assert
+            Assert.Throws<ObjectDisposedException>(() => stream.WriteByte(0));
         }
     }
 }

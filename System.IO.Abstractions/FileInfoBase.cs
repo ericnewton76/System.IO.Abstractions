@@ -6,6 +6,13 @@ namespace System.IO.Abstractions
     [Serializable]
     public abstract class FileInfoBase : FileSystemInfoBase
     {
+        protected FileInfoBase(IFileSystem fileSystem) : base(fileSystem)
+        {
+        }
+
+        [Obsolete("This constructor only exists to support mocking libraries.", error: true)]
+        internal FileInfoBase() { }
+
         /// <inheritdoc cref="FileInfo.AppendText"/>
         public abstract StreamWriter AppendText();
 
@@ -81,7 +88,12 @@ namespace System.IO.Abstractions
 
         public static implicit operator FileInfoBase(FileInfo fileInfo)
         {
-            return new FileInfoWrapper(fileInfo);
+            if (fileInfo == null)
+            {
+                return null;
+            }
+
+            return new FileInfoWrapper(new FileSystem(), fileInfo);
         }
     }
 }

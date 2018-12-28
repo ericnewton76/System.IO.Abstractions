@@ -10,6 +10,17 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
     public class MockFileInfoTests
     {
         [Test]
+        public void MockFileInfo_NullPath_ThrowArgumentNullException()
+        {
+            var fileSystem = new MockFileSystem();
+
+            TestDelegate action = () => new MockFileInfo(fileSystem, null);
+
+            Assert.Throws<ArgumentNullException>(action);
+
+        }
+
+        [Test]
         public void MockFileInfo_Exists_ShouldReturnTrueIfFileExistsInMemoryFileSystem()
         {
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
@@ -156,7 +167,7 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         [Test]
         public void MockFileInfo_IsReadOnly_ShouldSetNotReadOnlyAttributeOfFileInMemoryFileSystem()
         {
-            var fileData = new MockFileData("Demo text content") {Attributes = FileAttributes.ReadOnly};
+            var fileData = new MockFileData("Demo text content") { Attributes = FileAttributes.ReadOnly };
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { XFS.Path(@"c:\a.txt"), fileData }
@@ -199,7 +210,7 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
                 { XFS.Path(@"c:\a.txt"), fileData }
             });
             var fileInfo = new MockFileInfo(fileSystem, XFS.Path(@"c:\a.txt"));
-            var bytesToAdd = new byte[] {65, 66, 67, 68, 69};
+            var bytesToAdd = new byte[] { 65, 66, 67, 68, 69 };
 
 
             using (var file = fileInfo.OpenWrite())
@@ -389,19 +400,45 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
-        public void MockFileInfo_MoveTo_ShouldUpdateFileInfoDirectoryAndFullName()
+        public void MockFileInfo_MoveTo_NonExistentDestination_ShouldUpdateFileInfoDirectoryAndFullName()
         {
             var fileSystem = new MockFileSystem();
-            fileSystem.AddFile(XFS.Path(@"c:\temp\file.txt"), new MockFileData(@"line 1\r\nline 2"));
-            var fileInfo = fileSystem.FileInfo.FromFileName(XFS.Path(@"c:\temp\file.txt"));
-            string destinationFolder = XFS.Path(@"c:\temp2");
-            string destination = XFS.Path(destinationFolder + @"\file.txt");
-            fileSystem.AddDirectory(destination);
+            var sourcePath = XFS.Path(@"c:\temp\file.txt");
+            var destinationFolder = XFS.Path(@"c:\temp2");
+            var destinationPath = XFS.Path(destinationFolder + @"\file.txt");
+            fileSystem.AddFile(sourcePath, new MockFileData("1"));
+            var fileInfo = fileSystem.FileInfo.FromFileName(sourcePath);
+            fileSystem.AddDirectory(destinationFolder);
 
-            fileInfo.MoveTo(destination);
+            fileInfo.MoveTo(destinationPath);
 
             Assert.AreEqual(fileInfo.DirectoryName, destinationFolder);
-            Assert.AreEqual(fileInfo.FullName, destination);
+            Assert.AreEqual(fileInfo.FullName, destinationPath);
+        }
+
+        [Test]
+        public void MockFileInfo_MoveTo_NonExistentDestinationFolder_ShouldThrowDirectoryNotFoundException()
+        {
+            var fileSystem = new MockFileSystem();
+            var sourcePath = XFS.Path(@"c:\temp\file.txt");
+            var destinationPath = XFS.Path(@"c:\temp2\file.txt");
+            fileSystem.AddFile(sourcePath, new MockFileData("1"));
+            var fileInfo = fileSystem.FileInfo.FromFileName(sourcePath);
+
+            Assert.Throws<DirectoryNotFoundException>(() => fileInfo.MoveTo(destinationPath));
+        }
+
+        [Test]
+        public void MockFileInfo_MoveTo_ExistingDestination_ShouldThrowExceptionAboutFileAlreadyExisting()
+        {
+            var fileSystem = new MockFileSystem();
+            var sourcePath = XFS.Path(@"c:\temp\file.txt");
+            var destinationPath = XFS.Path(@"c:\temp2\file.txt");
+            fileSystem.AddFile(sourcePath, new MockFileData("1"));
+            var fileInfo = fileSystem.FileInfo.FromFileName(sourcePath);
+            fileSystem.AddFile(destinationPath, new MockFileData("2"));
+
+            Assert.Throws<IOException>(() => fileInfo.MoveTo(destinationPath));
         }
 
         [Test]
@@ -452,6 +489,22 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             TestDelegate action = () => fileInfo.CopyTo(destination);
 
             Assert.Throws<FileNotFoundException>(action);
+        }
+
+        [TestCase(@"..\..\..\c.txt")]
+        [TestCase(@"c:\a\b\c.txt")]
+        [TestCase(@"c:\a\c.txt")]
+        [TestCase(@"c:\c.txt")]
+        public void MockFileInfo_ToString_ShouldReturnOriginalFilePath(string path)
+        {
+            //Arrange
+            var filePath = XFS.Path(path);
+
+            //Act
+            var mockFileInfo = new MockFileInfo(new MockFileSystem(), filePath);
+
+            //Assert
+            Assert.AreEqual(filePath, mockFileInfo.ToString());
         }
 
 #if NET40

@@ -54,6 +54,8 @@ namespace System.IO.Abstractions.TestingHelpers
         /// </summary>
         IEnumerable<string> AllDirectories { get; }
 
+        StringOperations StringOperations { get; }
+
         FileBase File { get; }
         DirectoryBase Directory { get; }
         IFileInfoFactory FileInfo {get; }
@@ -62,5 +64,7 @@ namespace System.IO.Abstractions.TestingHelpers
         IDriveInfoFactory DriveInfo { get; }
 
         PathVerifier PathVerifier { get; }
+
+        IFileSystem FileSystem { get; }
     }
 }

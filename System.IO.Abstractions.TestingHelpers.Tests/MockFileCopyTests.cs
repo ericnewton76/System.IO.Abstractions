@@ -28,6 +28,49 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
+        public void MockFile_Copy_ShouldCloneContents()
+        {
+            var sourceFileName = XFS.Path(@"c:\source\demo.txt");
+            var destFileName = XFS.Path(@"c:\source\demo_copy.txt");
+
+            var mockFileSystem = new MockFileSystem();
+            mockFileSystem.AddFile(sourceFileName, "Original");
+            mockFileSystem.File.Copy(sourceFileName, destFileName);
+            
+            using (var stream = mockFileSystem.File.Open(sourceFileName, FileMode.Open, FileAccess.ReadWrite))
+            {
+                var binaryWriter = new System.IO.BinaryWriter(stream);
+
+                binaryWriter.Seek(0, SeekOrigin.Begin);
+                binaryWriter.Write("Modified");
+            }
+
+            Assert.AreEqual("Original", mockFileSystem.File.ReadAllText(destFileName));
+        }
+
+        [Test]
+        public void MockFile_Copy_ShouldCloneBinaryContents()
+        {
+            var sourceFileName = XFS.Path(@"c:\source\demo.bin");
+            var destFileName = XFS.Path(@"c:\source\demo_copy.bin");
+
+            byte[] original = new byte[] { 0xC0 };
+            var mockFileSystem = new MockFileSystem();
+            mockFileSystem.AddFile(sourceFileName, new MockFileData(original));
+            mockFileSystem.File.Copy(sourceFileName, destFileName);
+
+            using (var stream = mockFileSystem.File.Open(sourceFileName, FileMode.Open, FileAccess.ReadWrite))
+            {
+                var binaryWriter = new System.IO.BinaryWriter(stream);
+
+                binaryWriter.Seek(0, SeekOrigin.Begin);
+                binaryWriter.Write("Modified");
+            }
+
+            CollectionAssert.AreEqual(original, mockFileSystem.File.ReadAllBytes(destFileName));
+        }
+
+        [Test]
         public void MockFile_Copy_ShouldCreateFileAtNewDestination()
         {
             string sourceFileName = XFS.Path(@"c:\source\demo.txt");
@@ -96,20 +139,16 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
-        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenSourceFileNameContainsInvalidChars_Message()
+        [WindowsOnly(WindowsSpecifics.StrictPathRules)]
+        public void MockFile_Copy_ShouldThrowArgumentExceptionWhenSourceFileNameContainsInvalidChars_Message()
         {
-            if (XFS.IsUnixPlatform())
-            {
-                Assert.Pass("Path.GetInvalidChars() does not return anything on Mono");
-                return;
-            }
-
-            var destFilePath = XFS.Path(@"c:\something\demo.txt");
+            var destFilePath = @"c:\something\demo.txt";
             var fileSystem = new MockFileSystem();
+            var excludeChars = Shared.SpecialInvalidPathChars(fileSystem);
 
-            foreach (var invalidChar in fileSystem.Path.GetInvalidFileNameChars().Where(x => x != fileSystem.Path.DirectorySeparatorChar))
+            foreach (var invalidChar in fileSystem.Path.GetInvalidFileNameChars().Except(excludeChars))
             {
-                var sourceFilePath = XFS.Path(@"c:\something\demo.txt") + invalidChar;
+                var sourceFilePath = @"c:\something\demo.txt" + invalidChar;
 
                 var exception =
                     Assert.Throws<ArgumentException>(() => fileSystem.File.Copy(sourceFilePath, destFilePath));
@@ -120,20 +159,15 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
-        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenSourcePathContainsInvalidChars_Message()
+        [WindowsOnly(WindowsSpecifics.StrictPathRules)]
+        public void MockFile_Copy_ShouldThrowArgumentExceptionWhenSourcePathContainsInvalidChars_Message()
         {
-            if (XFS.IsUnixPlatform())
-            {
-                Assert.Pass("Path.GetInvalidChars() does not return anything on Mono");
-                return;
-            }
-
-            var destFilePath = XFS.Path(@"c:\something\demo.txt");
+            var destFilePath = @"c:\something\demo.txt";
             var fileSystem = new MockFileSystem();
 
             foreach (var invalidChar in fileSystem.Path.GetInvalidPathChars())
             {
-                var sourceFilePath = XFS.Path(@"c:\some" + invalidChar + @"thing\demo.txt");
+                var sourceFilePath = @"c:\some" + invalidChar + @"thing\demo.txt";
 
                 var exception =
                     Assert.Throws<ArgumentException>(() => fileSystem.File.Copy(sourceFilePath, destFilePath));
@@ -144,20 +178,15 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
-        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenTargetPathContainsInvalidChars_Message()
+        [WindowsOnly(WindowsSpecifics.StrictPathRules)]
+        public void MockFile_Copy_ShouldThrowArgumentExceptionWhenTargetPathContainsInvalidChars_Message()
         {
-            if (XFS.IsUnixPlatform())
-            {
-                Assert.Pass("Path.GetInvalidChars() does not return anything on Mono");
-                return;
-            }
-
-            var sourceFilePath = XFS.Path(@"c:\something\demo.txt");
+            var sourceFilePath = @"c:\something\demo.txt";
             var fileSystem = new MockFileSystem();
 
             foreach (var invalidChar in fileSystem.Path.GetInvalidPathChars())
             {
-                var destFilePath = XFS.Path(@"c:\some" + invalidChar + @"thing\demo.txt");
+                var destFilePath = @"c:\some" + invalidChar + @"thing\demo.txt";
 
                 var exception =
                     Assert.Throws<ArgumentException>(() => fileSystem.File.Copy(sourceFilePath, destFilePath));
@@ -168,20 +197,16 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
-        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenTargetFileNameContainsInvalidChars_Message()
+        [WindowsOnly(WindowsSpecifics.StrictPathRules)]
+        public void MockFile_Copy_ShouldThrowArgumentExceptionWhenTargetFileNameContainsInvalidChars_Message()
         {
-            if (XFS.IsUnixPlatform())
-            {
-                Assert.Pass("Path.GetInvalidChars() does not return anything on Mono");
-                return;
-            }
-
-            var sourceFilePath = XFS.Path(@"c:\something\demo.txt");
+            var sourceFilePath = @"c:\something\demo.txt";
             var fileSystem = new MockFileSystem();
+            var excludeChars = Shared.SpecialInvalidPathChars(fileSystem);
 
-            foreach (var invalidChar in fileSystem.Path.GetInvalidFileNameChars().Where(x => x != fileSystem.Path.DirectorySeparatorChar))
+            foreach (var invalidChar in fileSystem.Path.GetInvalidFileNameChars().Except(excludeChars))
             {
-                var destFilePath = XFS.Path(@"c:\something\demo.txt") + invalidChar;
+                var destFilePath = @"c:\something\demo.txt" + invalidChar;
 
                 var exception =
                     Assert.Throws<ArgumentException>(() => fileSystem.File.Copy(sourceFilePath, destFilePath));
@@ -189,6 +214,58 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
                 Assert.That(exception.Message, Is.EqualTo("Illegal characters in path."),
                     string.Format("Testing char: [{0:c}] \\{1:X4}", invalidChar, (int)invalidChar));
             }
+        }
+
+        [Test]
+        [WindowsOnly(WindowsSpecifics.Drives)]
+        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenSourcePathContainsInvalidUseOfDriveSeparator()
+        {
+            var badSourcePath = @"C::\something\demo.txt";
+            var destinationPath = @"C:\elsewhere\demo.txt";
+            var fileSystem = new MockFileSystem();
+
+            TestDelegate action = () => fileSystem.File.Copy(badSourcePath, destinationPath);
+
+            Assert.Throws<NotSupportedException>(action);
+        }
+
+        [Test]
+        [WindowsOnly(WindowsSpecifics.Drives)]
+        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenSourcePathContainsInvalidDriveLetter()
+        {
+            var badSourcePath = @"0:\something\demo.txt";
+            var destinationPath = @"C:\elsewhere\demo.txt";
+            var fileSystem = new MockFileSystem();
+
+            TestDelegate action = () => fileSystem.File.Copy(badSourcePath, destinationPath);
+
+            Assert.Throws<NotSupportedException>(action);
+        }
+
+        [Test]
+        [WindowsOnly(WindowsSpecifics.Drives)]
+        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenDestinationPathContainsInvalidUseOfDriveSeparator()
+        {
+            var sourcePath = @"C:\something\demo.txt";
+            var badDestinationPath = @"C:\elsewhere:\demo.txt";
+            var fileSystem = new MockFileSystem();
+
+            TestDelegate action = () => fileSystem.File.Copy(sourcePath, badDestinationPath);
+
+            Assert.Throws<NotSupportedException>(action);
+        }
+
+        [Test]
+        [WindowsOnly(WindowsSpecifics.Drives)]
+        public void MockFile_Copy_ShouldThrowNotSupportedExceptionWhenDestinationPathContainsInvalidDriveLetter()
+        {
+            var sourcePath = @"C:\something\demo.txt";
+            var badDestinationPath = @"^:\elsewhere\demo.txt";
+            var fileSystem = new MockFileSystem();
+
+            TestDelegate action = () => fileSystem.File.Copy(sourcePath, badDestinationPath);
+
+            Assert.Throws<NotSupportedException>(action);
         }
 
         [Test]
@@ -290,6 +367,19 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             TestDelegate action = () => fileSystem.File.Copy(sourceFilePath, XFS.Path(@"c:\something\demo.txt"));
 
             Assert.Throws<FileNotFoundException>(action);
+        }
+        
+        [Test]
+        public void MockFile_Copy_ShouldWorkWithRelativePaths()
+        {
+            var sourceFile = "source_file.txt";
+            var destinationFile = "destination_file.txt";
+            var fileSystem = new MockFileSystem();
+
+            fileSystem.File.Create(sourceFile).Close();
+            fileSystem.File.Copy(sourceFile, destinationFile);
+
+            Assert.That(fileSystem.File.Exists(destinationFile));
         }
     }
 }

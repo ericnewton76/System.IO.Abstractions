@@ -8,10 +8,10 @@ namespace System.IO.Abstractions.TestingHelpers
         private readonly IMockFileDataAccessor mockFileSystem;
         private string path;
 
-        public MockFileInfo(IMockFileDataAccessor mockFileSystem, string path)
+        public MockFileInfo(IMockFileDataAccessor mockFileSystem, string path) : base(mockFileSystem?.FileSystem)
         {
             this.mockFileSystem = mockFileSystem ?? throw new ArgumentNullException(nameof(mockFileSystem));
-            this.path = path;
+            this.path = path ?? throw new ArgumentNullException(nameof(path));
         }
 
         MockFileData MockFileData
@@ -168,7 +168,7 @@ namespace System.IO.Abstractions.TestingHelpers
             {
                 return this;
             }
-            new MockFile(mockFileSystem).Copy(FullName, destFileName, overwrite);
+            mockFileSystem.File.Copy(FullName, destFileName, overwrite);
             return mockFileSystem.FileInfo.FromFileName(destFileName);
         }
 
@@ -242,7 +242,7 @@ namespace System.IO.Abstractions.TestingHelpers
 
         public override StreamReader OpenText()
         {
-          return new StreamReader(OpenRead());
+            return new StreamReader(OpenRead());
         }
 
         public override Stream OpenWrite()
@@ -259,7 +259,7 @@ namespace System.IO.Abstractions.TestingHelpers
         public override FileInfoBase Replace(string destinationFileName, string destinationBackupFileName, bool ignoreMetadataErrors)
         {
             mockFileSystem.File.Replace(path, destinationFileName, destinationBackupFileName, ignoreMetadataErrors);
-            return new FileInfo(destinationFileName);
+            return mockFileSystem.FileInfo.FromFileName(destinationFileName);
         }
 #endif
 
@@ -296,7 +296,7 @@ namespace System.IO.Abstractions.TestingHelpers
             set
             {
                 if (MockFileData == null) throw new FileNotFoundException("File not found", path);
-                if(value)
+                if (value)
                     MockFileData.Attributes |= FileAttributes.ReadOnly;
                 else
                     MockFileData.Attributes &= ~FileAttributes.ReadOnly;
@@ -310,6 +310,11 @@ namespace System.IO.Abstractions.TestingHelpers
                 if (MockFileData == null) throw new FileNotFoundException("File not found", path);
                 return MockFileData.Contents.Length;
             }
+        }
+
+        public override string ToString()
+        {
+            return path;
         }
     }
 }

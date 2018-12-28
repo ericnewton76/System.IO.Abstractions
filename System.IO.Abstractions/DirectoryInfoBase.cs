@@ -7,6 +7,13 @@ namespace System.IO.Abstractions
     [Serializable]
     public abstract class DirectoryInfoBase : FileSystemInfoBase
     {
+        protected DirectoryInfoBase(IFileSystem fileSystem) : base(fileSystem)
+        {
+        }
+
+        [Obsolete("This constructor only exists to support mocking libraries.", error: true)]
+        internal DirectoryInfoBase() { }
+
         /// <inheritdoc cref="DirectoryInfo.Create()"/>
         public abstract void Create();
 #if NET40
@@ -102,7 +109,7 @@ namespace System.IO.Abstractions
         {
             if (directoryInfo == null)
                 return null;
-            return new DirectoryInfoWrapper(directoryInfo);
+            return new DirectoryInfoWrapper(new FileSystem(), directoryInfo);
         }
     }
 }

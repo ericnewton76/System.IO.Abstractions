@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -16,7 +17,7 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { @"c:\something\demo.txt", new MockFileData("Demo\r\ntext\ncontent\rvalue") },
-                { @"c:\something\other.gif", new MockFileData(new byte[] { 0x21, 0x58, 0x3f, 0xa9 }) }
+                { @"c:\something\other.gif", new MockFileData("gif content") }
             });
 
             var result = fileSystem.GetFile(@"c:\something\else.txt");
@@ -31,7 +32,7 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { @"c:\something\demo.txt", file1 },
-                { @"c:\something\other.gif", new MockFileData(new byte[] { 0x21, 0x58, 0x3f, 0xa9 }) }
+                { @"c:\something\other.gif", new MockFileData("gif content") }
             });
 
             var result = fileSystem.GetFile(@"c:\something\demo.txt");
@@ -40,13 +41,14 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
+        [WindowsOnly(WindowsSpecifics.CaseInsensitivity)]
         public void MockFileSystem_GetFile_ShouldReturnFileRegisteredInConstructorWhenPathsDifferByCase()
         {
             var file1 = new MockFileData("Demo\r\ntext\ncontent\rvalue");
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { @"c:\something\demo.txt", file1 },
-                { @"c:\something\other.gif", new MockFileData(new byte[] { 0x21, 0x58, 0x3f, 0xa9 }) }
+                { @"c:\something\other.gif", new MockFileData("gif content") }
             });
 
             var result = fileSystem.GetFile(@"c:\SomeThing\DEMO.txt");
@@ -55,9 +57,54 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
         }
 
         [Test]
+        [UnixOnly(UnixSpecifics.CaseSensitivity)]
+        public void MockFileSystem_GetFile_ShouldNotReturnFileRegisteredInConstructorWhenPathsDifferByCase()
+        {
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { "/something/demo.txt", new MockFileData("Demo\r\ntext\ncontent\rvalue") },
+                { "/something/other.gif", new MockFileData("gif content") }
+            });
+
+            var result = fileSystem.GetFile("/SomeThing/DEMO.txt");
+
+            Assert.IsNull(result);
+        }
+
+        [Test]
+        public void MockFileSystem_AddFile_ShouldHandleUnnormalizedSlashes()
+        {
+            var path = XFS.Path(@"c:\d1\d2\file.txt");
+            var alternatePath = XFS.Path("c:/d1/d2/file.txt");
+            var alternateParentPath = XFS.Path("c://d1//d2/");
+            var fs = new MockFileSystem();
+            fs.AddFile(path, new MockFileData("Hello"));
+
+            var fileCount = fs.Directory.GetFiles(alternateParentPath).Length;
+            var fileExists = fs.File.Exists(alternatePath);
+
+            Assert.AreEqual(1, fileCount);
+            Assert.IsTrue(fileExists);
+        }
+
+        [Test]
+        public void MockFileSystem_AddFile_ShouldHandleNullFileDataAsEmpty()
+        {
+            var path = XFS.Path(@"c:\something\nullish.txt");
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { path, null }
+            });
+
+            var result = fileSystem.File.ReadAllText(path);
+
+            Assert.IsEmpty(result, "Null MockFileData should be allowed for and result in an empty file.");
+        }
+
+        [Test]
         public void MockFileSystem_AddFile_ShouldRepaceExistingFile()
         {
-            const string path = @"c:\some\file.txt";
+            var path = XFS.Path(@"c:\some\file.txt");
             const string existingContent = "Existing content";
             var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
@@ -138,11 +185,12 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
 
             Assert.Contains(XFS.Path(@"C:\test\file.txt"), fileSystem.AllFiles.ToList());
             Assert.Contains(XFS.Path(@"C:\LOUD\file.txt"), fileSystem.AllFiles.ToList());
-            Assert.Contains(XFS.Path(@"C:\test\SUBDirectory\"), fileSystem.AllDirectories.ToList());
-            Assert.Contains(XFS.Path(@"C:\LOUD\SUBDirectory\"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\test\SUBDirectory"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\LOUD\SUBDirectory"), fileSystem.AllDirectories.ToList());
         }
 
         [Test]
+        [WindowsOnly(WindowsSpecifics.CaseInsensitivity)]
         public void MockFileSystem_AddFile_ShouldMatchCapitalization_PartialMatch()
         {
             var fileSystem = new MockFileSystem();
@@ -156,11 +204,12 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
 
             Assert.Contains(XFS.Path(@"C:\test\subtest\file.txt"), fileSystem.AllFiles.ToList());
             Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\file.txt"), fileSystem.AllFiles.ToList());
-            Assert.Contains(XFS.Path(@"C:\test\subtest\SUBDirectory\"), fileSystem.AllDirectories.ToList());
-            Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\SUBDirectory\"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\test\subtest\SUBDirectory"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\SUBDirectory"), fileSystem.AllDirectories.ToList());
         }
 
         [Test]
+        [WindowsOnly(WindowsSpecifics.CaseInsensitivity)]
         public void MockFileSystem_AddFile_ShouldMatchCapitalization_PartialMatch_FurtherLeft()
         {
             var fileSystem = new MockFileSystem();
@@ -174,8 +223,8 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
 
             Assert.Contains(XFS.Path(@"C:\test\subtest\new\file.txt"), fileSystem.AllFiles.ToList());
             Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\new\file.txt"), fileSystem.AllFiles.ToList());
-            Assert.Contains(XFS.Path(@"C:\test\subtest\new\SUBDirectory\"), fileSystem.AllDirectories.ToList());
-            Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\new\SUBDirectory\"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\test\subtest\new\SUBDirectory"), fileSystem.AllDirectories.ToList());
+            Assert.Contains(XFS.Path(@"C:\LOUD\SUBLOUD\new\SUBDirectory"), fileSystem.AllDirectories.ToList());
         }
 
         [Test]
@@ -243,13 +292,87 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             {
                 XFS.Path(@"c:\something\demo.txt"),
                 XFS.Path(@"c:\something\other.gif"),
-                XFS.Path(@"d:\foobar\"),
+                XFS.Path(@"d:\foobar"),
                 XFS.Path(@"d:\foo\bar")
             };
 
             var result = fileSystem.AllNodes;
 
             Assert.AreEqual(expectedNodes, result);
+        }
+
+        [Test]
+        [TestCase(@"C:\path")]
+        [TestCase(@"C:\path\")]
+        public void MockFileSystem_AddDirectory_TrailingSlashAllowedButNotRequired(string path)
+        {
+            var fileSystem = new MockFileSystem();
+            var path2 = XFS.Path(path);
+
+            fileSystem.AddDirectory(path2);
+
+            Assert.IsTrue(fileSystem.FileExists(path2));
+        }
+
+        [Test]
+        public void MockFileSystem_GetFiles_ThrowsArgumentExceptionForInvalidCharacters()
+        {
+            // Arrange
+            const string path = @"c:\";
+            var fileSystem = new MockFileSystem();
+            fileSystem.AddDirectory(XFS.Path(path));
+            
+            // Act
+            TestDelegate getFilesWithInvalidCharacterInPath = () => fileSystem.Directory.GetFiles($"{path}{'\0'}.txt");
+
+            // Assert
+            Assert.Throws<ArgumentException>(getFilesWithInvalidCharacterInPath);
+        }
+
+        [Test]
+        [TestCase(null)]
+        [TestCase(@"C:\somepath")]
+        public void MockFileSystem_DefaultState_CurrentDirectoryExists(string currentDirectory)
+        {
+            var fs = new MockFileSystem(null, currentDirectory);
+
+            var actualCurrentDirectory = fs.DirectoryInfo.FromDirectoryName(".");
+
+            Assert.IsTrue(actualCurrentDirectory.Exists);
+        }
+
+        [Test]
+        public void MockFileSystem_FileSystemWatcher_ShouldBeAssignable()
+        {
+            var path = XFS.Path(@"C:\root");
+            var fileSystem = new MockFileSystem {FileSystemWatcher = new TestFileSystemWatcherFactory()};
+            var watcher = fileSystem.FileSystemWatcher.FromPath(path);
+            Assert.AreEqual(path, watcher.Path);
+        }
+
+        private class TestFileSystemWatcherFactory : IFileSystemWatcherFactory
+        {
+            public FileSystemWatcherBase CreateNew() => new TestFileSystemWatcher(null);
+            public FileSystemWatcherBase FromPath(string path) => new TestFileSystemWatcher(path);
+        }
+
+        private class TestFileSystemWatcher : FileSystemWatcherBase
+        {
+            public TestFileSystemWatcher(string path) => Path = path;
+            public override string Path { get; set; }
+            public override bool IncludeSubdirectories { get; set; }
+            public override bool EnableRaisingEvents { get; set; }
+            public override string Filter { get; set; }
+            public override int InternalBufferSize { get; set; }
+            public override NotifyFilters NotifyFilter { get; set; }
+#if NET40
+            public override ISite Site { get; set; }
+            public override ISynchronizeInvoke SynchronizingObject { get; set; }
+            public override void BeginInit() {}
+            public override void EndInit() {}
+#endif
+            public override WaitForChangedResult WaitForChanged(WatcherChangeTypes changeType) => default(WaitForChangedResult);
+            public override WaitForChangedResult WaitForChanged(WatcherChangeTypes changeType, int timeout) => default(WaitForChangedResult);
         }
     }
 }

@@ -4,6 +4,19 @@
     [Serializable]
     public abstract class FileSystemInfoBase
     {
+        protected FileSystemInfoBase(IFileSystem fileSystem)
+        {
+            FileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
+        }
+
+        [Obsolete("This constructor only exists to support mocking libraries.", error: true)]
+        internal FileSystemInfoBase() { }
+
+        /// <summary>
+        /// Exposes the underlying filesystem implementation. This is useful for implementing extension methods.
+        /// </summary>
+        public IFileSystem FileSystem { get; }
+
         /// <inheritdoc cref="FileSystemInfo.Delete"/>
         public abstract void Delete();
 

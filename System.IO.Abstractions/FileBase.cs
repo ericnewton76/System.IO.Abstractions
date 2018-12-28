@@ -8,6 +8,19 @@ namespace System.IO.Abstractions
     [Serializable]
     public abstract class FileBase
     {
+        protected FileBase(IFileSystem fileSystem)
+        {
+            FileSystem = fileSystem;
+        }
+
+        [Obsolete("This constructor only exists to support mocking libraries.", error: true)]
+        internal FileBase() { }
+
+        /// <summary>
+        /// Exposes the underlying filesystem implementation. This is useful for implementing extension methods.
+        /// </summary>
+        public IFileSystem FileSystem { get; }
+
         /// <inheritdoc cref="File.AppendAllLines(string,IEnumerable{string})"/>
         public abstract void AppendAllLines(string path, IEnumerable<string> contents);
 
